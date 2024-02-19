@@ -40,11 +40,12 @@ class SuggestPost(StatesGroup):
     #TODO зробити функціонал знизу ⬇️
     
     texts = {
-        'SuggestPost:title': 'Введіть назву товару знову:',
-        'SuggestPost:text': 'Введіть опис знову:',
-        'SuggestPost:anon': 'Введіть вартість знову:',
-        'SuggestPost:image': 'Останній стан',
+        'SuggestPost:title': 'Введіть тему(заголовок) знову',
+        'SuggestPost:text': 'Введіть опис знову',
+        'SuggestPost:anon': 'Введіть чи хочете запропонувати пост анонімно (Так/Ні) знову',
+        'SuggestPost:image': 'Відправте фото знову',
     }
+
 
 @private_router.message(StateFilter(None), F.text == "Зв'язатися з Адміністрацією")
 async def connect_with_admins(message: types.Message):
@@ -53,7 +54,7 @@ async def connect_with_admins(message: types.Message):
 
 @private_router.message(StateFilter(None), F.text == "Запропонувати пост")
 async def suggest_post(message: types.Message, state: FSMContext):
-    await message.answer("Введіть тему (заголовок) для посту ⬇️", reply_markup=types.ReplyKeyboardRemove())
+    await message.answer("Введіть тему (заголовок) для посту", reply_markup=types.ReplyKeyboardRemove())
     await state.set_state(SuggestPost.title)
     
     
@@ -61,44 +62,73 @@ async def suggest_post(message: types.Message, state: FSMContext):
 async def cancel_task(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
+        await message.answer("Немає активних дій", reply_markup=USER_KB)
         return
     await state.clear()
     await message.answer("Дії успішно скасовано ✅", reply_markup=USER_KB)
     
     
+@private_router.message(StateFilter('*'), Command('back'))
+async def back_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state == SuggestPost.title:
+        await message.answer("Введіть тему (заголовок) для посту")
+    
+    previous = None
+    
+    for step in SuggestPost.__all_states__:
+        if step.state == current_state:
+            await state.set_state(previous)
+            
+            # AttributeError fix
+            try:
+                await message.answer(f"{SuggestPost.texts[previous.state]}")
+                return
+            except AttributeError:
+                await state.set_state(SuggestPost.title)
+        
+        previous = step
+    
+    
 @private_router.message(SuggestPost.title, F.text)
 async def title_of_post(message: types.Message, state: FSMContext):
-    await message.answer("Введіть текст посту ⬇️")
+    await message.answer("Введіть текст посту")
     await state.set_state(SuggestPost.text)
 
 
 @private_router.message(SuggestPost.title)
 async def title_of_post_dem(message: types.Message, state: FSMContext):
-    await message.answer("Незрозуміле повідомлення, напишіть ТЕКСТ посту ⬇️")
+    await message.answer("Незрозуміле повідомлення, напишіть <b>ЗАГОЛОВОК</b> посту")
 
 
 @private_router.message(SuggestPost.text, F.text)
 async def text_of_post(message: types.Message, state: FSMContext):
-    await message.answer("Опублікувати пост Анонімно? (Так\Ні) ⬇️")
+    await message.answer("Опублікувати пост Анонімно? (Так\Ні)")
     await state.set_state(SuggestPost.anon)
 
 
+@private_router.message(SuggestPost.text)
+async def text_of_post(message: types.Message, state: FSMContext):
+    await message.answer("Незрозуміле повідомлення, напишіть <b>ТЕКСТ</b> посту")
+
+
 @private_router.message(SuggestPost.anon, or_f(F.text.lower() == "так", F.text.lower() == "yes"))
-async def no_anon_post(message: types.Message, state: FSMContext):  
-    await message.answer("(Tak) Відправте зображення для посту ⬇️")
+async def yes_anon_post(message: types.Message, state: FSMContext):  
+    await message.answer("Відправте зображення для посту")
     await state.set_state(SuggestPost.image)
 
     
     
 @private_router.message(SuggestPost.anon, or_f(F.text.lower() == "ні", F.text.lower() == "no"))
-async def yes_anon_post(message: types.Message, state: FSMContext):  
-    await message.answer("(No) Відправте зображення для посту ⬇️")
+async def no_anon_post(message: types.Message, state: FSMContext):  
+    await message.answer("Відправте зображення для посту")
     await state.set_state(SuggestPost.image)
 
 
 @private_router.message(SuggestPost.anon)
 async def anon_of_post_dem(message: types.Message, state: FSMContext):
-    await message.answer("(НЕ ПРОЙШЛО)Незрозуміле повідомлення. Напишіть лише 'Так' або 'Ні' ⬇️")
+    await message.answer("Незрозуміле повідомлення. Напишіть лише 'Так' або 'Ні'")
+
 
 @private_router.message(SuggestPost.image, F.photo)
 async def img_post(message: types.Message, state: FSMContext):
@@ -108,5 +138,5 @@ async def img_post(message: types.Message, state: FSMContext):
 
 @private_router.message(SuggestPost.image)
 async def img_post_dem(message: types.Message, state: FSMContext):
-    await message.answer("Відправте ФОТО!!!")
+    await message.answer("Відправте <b>ФОТО</b>")
 
