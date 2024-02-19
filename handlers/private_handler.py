@@ -7,6 +7,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter, or_f
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.orm_query import orm_add_suggest, orm_delete_suggest, orm_get_suggest, orm_update_suggest, orm_get_suggests
 
 private_router = Router()
 private_router.message.filter(ChatTypeFilter(['private']))
@@ -56,6 +58,7 @@ async def connect_with_admins(message: types.Message):
 async def suggest_post(message: types.Message, state: FSMContext):
     await message.answer("Введіть тему (заголовок) для посту", reply_markup=types.ReplyKeyboardRemove())
     await state.set_state(SuggestPost.title)
+    await message.answer(str(message.from_user.id))
     
     
 @private_router.message(StateFilter('*'), Command('cancel'))
