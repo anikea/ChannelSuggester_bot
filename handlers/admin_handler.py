@@ -7,12 +7,18 @@ from custom_filters.chat_type_filter import ChatTypeFilter
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database.orm_query import orm_add_suggest, orm_delete_suggest, orm_get_suggest, orm_update_suggest, orm_get_suggests
+
+from keyboards.inline import get_callback_btns
+
 import os
 
 
 admin_router = Router()
 
-admin_router.message.filter(ChatTypeFilter['private'])
+admin_router.message.filter(ChatTypeFilter(['private']))
 
 ADMIN_ID = os.getenv('ADMIN_ID')
 
@@ -35,3 +41,17 @@ USER_KB = get_keyboard(
 async def admin_command(message: types.Message):
     await message.answer(f'Вітаю пане Адміністратор', reply_markup=ADMIN_KB)
     
+
+@admin_router.message(F.text == "Переглянути запити")
+async def check_suggest(message: types.Message, session: AsyncSession):
+    for suggest in await orm_get_suggests(session):
+        await message.answer_photo(
+            suggest.image,
+            caption=f'<strong>{suggest.title}\
+                </strong>\n{suggest.text}\nАнонімно: {suggest.anon}',
+                parse_mode='HTML',
+                reply_markup=get_callback_btns(btns={
+                    'Опублікувати пост': f'push_{suggest.id}',
+                    'Видалити пост': f'delete_{suggest.id}'
+                })
+        )

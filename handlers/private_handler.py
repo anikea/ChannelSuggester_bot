@@ -134,7 +134,21 @@ async def anon_of_post_dem(message: types.Message, state: FSMContext):
 
 
 @private_router.message(SuggestPost.image, F.photo)
-async def img_post(message: types.Message, state: FSMContext):
+async def img_post(message: types.Message, state: FSMContext, session: AsyncSession):
+    await state.update_data(image=message.photo[-1].file_id)
+    
+    data = await state.get_data()
+    
+    try:
+        await orm_add_suggest(session, data)
+    
+    except Exception as e:
+        await message.answer(
+            f"Помилка: \n{str(e)}\Зверніться до сис адміна",
+            reply_markup=USER_KB,
+        )
+        await state.clear()
+    
     await message.answer("Ваш запит на пост прийнято, очікуйте підтвердження від адміністрації 😄")
     await state.clear()
 
