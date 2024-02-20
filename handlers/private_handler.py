@@ -10,6 +10,8 @@ from aiogram.filters import StateFilter, or_f
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.orm_query import orm_add_suggest, orm_delete_suggest, orm_get_suggest, orm_update_suggest, orm_get_suggests
 
+from database.engine import session_maker
+
 private_router = Router()
 private_router.message.filter(ChatTypeFilter(['private']))
 
@@ -33,13 +35,13 @@ async def start_cmd(message: types.Message):
 
 
 class SuggestPost(StatesGroup):
+    
     title = State()
     text = State()
     anon = State()
     image = State()
-
-    
-    #TODO зробити функціонал знизу ⬇️
+    user_id = State()
+    checked = State()
     
     texts = {
         'SuggestPost:title': 'Введіть тему(заголовок) знову',
@@ -58,7 +60,6 @@ async def connect_with_admins(message: types.Message):
 async def suggest_post(message: types.Message, state: FSMContext):
     await message.answer("Введіть тему (заголовок) для посту", reply_markup=types.ReplyKeyboardRemove())
     await state.set_state(SuggestPost.title)
-    await message.answer(str(message.from_user.id))
     
     
 @private_router.message(StateFilter('*'), Command('cancel'))
@@ -96,6 +97,7 @@ async def back_handler(message: types.Message, state: FSMContext):
 @private_router.message(SuggestPost.title, F.text)
 async def title_of_post(message: types.Message, state: FSMContext):
     await message.answer("Введіть текст посту")
+    await state.update_data(title=message.text)
     await state.set_state(SuggestPost.text)
 
 
@@ -107,6 +109,7 @@ async def title_of_post_dem(message: types.Message, state: FSMContext):
 @private_router.message(SuggestPost.text, F.text)
 async def text_of_post(message: types.Message, state: FSMContext):
     await message.answer("Опублікувати пост Анонімно? (Так\Ні)")
+    await state.update_data(text=message.text)
     await state.set_state(SuggestPost.anon)
 
 
@@ -118,6 +121,7 @@ async def text_of_post(message: types.Message, state: FSMContext):
 @private_router.message(SuggestPost.anon, or_f(F.text.lower() == "так", F.text.lower() == "yes"))
 async def yes_anon_post(message: types.Message, state: FSMContext):  
     await message.answer("Відправте зображення для посту")
+    await state.update_data(anon=message.text)
     await state.set_state(SuggestPost.image)
 
     
@@ -125,6 +129,7 @@ async def yes_anon_post(message: types.Message, state: FSMContext):
 @private_router.message(SuggestPost.anon, or_f(F.text.lower() == "ні", F.text.lower() == "no"))
 async def no_anon_post(message: types.Message, state: FSMContext):  
     await message.answer("Відправте зображення для посту")
+    await state.update_data(anon=message.text)
     await state.set_state(SuggestPost.image)
 
 
@@ -134,23 +139,22 @@ async def anon_of_post_dem(message: types.Message, state: FSMContext):
 
 
 @private_router.message(SuggestPost.image, F.photo)
-async def img_post(message: types.Message, state: FSMContext, session: AsyncSession):
+async def img_posted(message: types.Message, state: FSMContext, session: AsyncSession):
     await state.update_data(image=message.photo[-1].file_id)
+    await state.update_data(user_id=str(message.from_user.id))
+    await state.update_data(checked=0)
     
     data = await state.get_data()
-    
+
     try:
         await orm_add_suggest(session, data)
-    
+        await message.answer("Ваш запит на пост прийнято, очікуйте підтвердження від адміністрації 😄")
+        await state.clear()
     except Exception as e:
         await message.answer(
             f"Помилка: \n{str(e)}\Зверніться до сис адміна",
             reply_markup=USER_KB,
         )
-        await state.clear()
-    
-    await message.answer("Ваш запит на пост прийнято, очікуйте підтвердження від адміністрації 😄")
-    await state.clear()
 
 
 @private_router.message(SuggestPost.image)

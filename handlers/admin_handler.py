@@ -51,7 +51,30 @@ async def check_suggest(message: types.Message, session: AsyncSession):
                 </strong>\n{suggest.text}\nАнонімно: {suggest.anon}',
                 parse_mode='HTML',
                 reply_markup=get_callback_btns(btns={
-                    'Опублікувати пост': f'push_{suggest.id}',
-                    'Видалити пост': f'delete_{suggest.id}'
+                    'Опублікувати анонімно': f'push_{suggest.id}',
+                    'Опублікувати відкрито': f'push_deanon_{suggest.id}',
+                    'Видалити пропозицію': f'delete_{suggest.id}'
                 })
         )
+
+@admin_router.callback_query(F.data.startswith("delete_"))
+async def callback_delete(callback: types.CallbackQuery, session: AsyncSession):
+
+    suggest_id = callback.data.split('_')[-1] 
+    
+    await orm_delete_suggest(session, int(suggest_id))
+    
+    await callback.answer("Пропозиція видалена")
+    await callback.message.answer('Пропозиція видалена')
+    
+
+@admin_router.callback_query(F.data.startswith('push_deanon'))
+async def callback_push(callback: types.CallbackQuery, session: AsyncSession):
+    await callback.message.answer('Опубліковано відкрито')
+    
+
+@admin_router.callback_query(F.data.startswith('push_'))
+async def callback_push(callback: types.CallbackQuery, session: AsyncSession):
+   await callback.message.answer('Опубліковано анонімно')
+    
+

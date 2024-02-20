@@ -10,7 +10,7 @@ async def orm_add_suggest(session: AsyncSession, data: dict):
         title=data['title'],
         text=data['text'],
         anon=data['anon'],
-        checked=data['checked'],
+        checked=int(data['checked']),
         image=data['image']
     )
     
@@ -36,7 +36,7 @@ async def orm_update_suggest(session: AsyncSession, suggest_id: int, data):
         title=data['title'],
         text=data['text'],
         anon=data['anon'],
-        checked=data['checked'],
+        checked=int(data['checked']),
         image=data['image'])
     await session.execute(query)
     await session.commit()
