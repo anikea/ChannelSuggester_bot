@@ -1,7 +1,10 @@
-from aiogram import Router, types, F
+from aiogram import Router, types, F, Bot
 from aiogram.filters import Command, or_f
+from aiogram.methods import GetChatMember
 from custom_filters.chat_type_filter import ChatTypeFilter
 from keyboards.reply_keybrd import get_keyboard
+
+import os
 
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
@@ -10,7 +13,7 @@ from aiogram.filters import StateFilter, or_f
 from sqlalchemy.ext.asyncio import AsyncSession
 from database.orm_query import orm_add_suggest, orm_delete_suggest, orm_get_suggest, orm_update_suggest, orm_get_suggests
 
-from database.engine import session_maker
+from handlers.admin_handler import CHANNEL_ID
 
 private_router = Router()
 private_router.message.filter(ChatTypeFilter(['private']))
@@ -23,12 +26,22 @@ USER_KB = get_keyboard(
     sizes=(2, )
 )
 
+bot = Bot(os.getenv("TOKEN"))
 
-@private_router.message(Command('start'))
+@private_router.message(StateFilter(None),Command('start'))
 async def start_cmd(message: types.Message):
-    await message.answer(
+    chat_info = await bot.get_chat_member(chat_id=CHANNEL_ID, user_id=message.from_user.id)
+    if chat_info.status != 'left':
+        await message.answer(
         'Вітаю! 💌 Я бот-помічник для каналу "Channel Name".\nОберіть, що хочете зробити ⬇️',
         reply_markup=USER_KB)
+    else:
+        await message.answer(text="<b>Схоже ви не підписані на канал!</b>\n"
+                           "Підпишіться, після цього використайте команду /start "
+                           "\n\n\n<a href='https://t.me/+cv1L5SHF66c1ZmQy'>КАНАЛ</a>\n\n\n", 
+                     parse_mode='HTML')
+
+    
 
 
 # FMS
@@ -75,6 +88,11 @@ async def cancel_task(message: types.Message, state: FSMContext):
 @private_router.message(StateFilter('*'), Command('back'))
 async def back_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
+    
+    if current_state is None:
+        await message.answer('Нікуди повертатись')
+        return
+    
     if current_state == SuggestPost.title:
         await message.answer("Введіть тему (заголовок) для посту")
     
@@ -141,7 +159,7 @@ async def anon_of_post_dem(message: types.Message, state: FSMContext):
 @private_router.message(SuggestPost.image, F.photo)
 async def img_posted(message: types.Message, state: FSMContext, session: AsyncSession):
     await state.update_data(image=message.photo[-1].file_id)
-    await state.update_data(user_id=str(message.from_user.id))
+    await state.update_data(user_id=message.from_user.id)
     await state.update_data(checked=0)
     
     data = await state.get_data()
