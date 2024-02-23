@@ -34,6 +34,7 @@ async def main():
     dp.update.middleware(DBSession(session_pool=session_maker))
     
     await bot.delete_webhook(drop_pending_updates=True)
+    await bot.delete_my_commands(scope=types.BotCommandScopeAllPrivateChats())
     await dp.start_polling(bot)
 
 

@@ -11,7 +11,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter, or_f
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.orm_query import orm_add_suggest, orm_delete_suggest, orm_get_suggest, orm_update_suggest, orm_get_suggests
+from database.orm_query import orm_add_suggest
 
 from handlers.admin_handler import CHANNEL_ID
 
@@ -178,4 +178,3 @@ async def img_posted(message: types.Message, state: FSMContext, session: AsyncSe
 @private_router.message(SuggestPost.image)
 async def img_post_dem(message: types.Message, state: FSMContext):
     await message.answer("Відправте <b>ФОТО</b>")
-
