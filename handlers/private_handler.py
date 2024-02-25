@@ -1,17 +1,17 @@
 from aiogram import Router, types, F, Bot
 from aiogram.filters import Command, or_f
-from aiogram.methods import GetChatMember
 from custom_filters.chat_type_filter import ChatTypeFilter
+from custom_filters.state_class_filter import CustomStateFilter
 from keyboards.reply_keybrd import get_keyboard
 
 import os
 
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.filters import StateFilter, or_f
+from aiogram.filters import StateFilter
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.orm_query import orm_add_suggest
+from database.orm_query import orm_add_suggest, question_add
 
 from handlers.admin_handler import CHANNEL_ID
 
@@ -21,7 +21,7 @@ private_router.message.filter(ChatTypeFilter(['private']))
 
 USER_KB = get_keyboard(
     "Запропонувати пост", 
-    "Зв'язатися з Адміністрацією",
+    "Задати питання",
     placeholder="Оберіть",
     sizes=(2, )
 )
@@ -40,8 +40,6 @@ async def start_cmd(message: types.Message):
                            "Підпишіться, після цього використайте команду /start "
                            "\n\n\n<a href='https://t.me/+cv1L5SHF66c1ZmQy'>КАНАЛ</a>\n\n\n", 
                      parse_mode='HTML')
-
-    
 
 
 # FMS
@@ -63,19 +61,19 @@ class SuggestPost(StatesGroup):
         'SuggestPost:image': 'Відправте фото знову',
     }
 
+class QuestionAdd(StatesGroup):
+    text = State()
+    user_id = State()
+    checked = State()
 
-@private_router.message(StateFilter(None), F.text == "Зв'язатися з Адміністрацією")
-async def connect_with_admins(message: types.Message):
-    await message.answer("Функція знаходиться в розробці ❗")
     
-
 @private_router.message(StateFilter(None), F.text == "Запропонувати пост")
 async def suggest_post(message: types.Message, state: FSMContext):
     await message.answer("Введіть тему (заголовок) для посту", reply_markup=types.ReplyKeyboardRemove())
     await state.set_state(SuggestPost.title)
+
     
-    
-@private_router.message(StateFilter('*'), Command('cancel'))
+@private_router.message(or_f(CustomStateFilter(SuggestPost), CustomStateFilter(QuestionAdd)), Command('cancel'))
 async def cancel_task(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     if current_state is None:
@@ -85,7 +83,7 @@ async def cancel_task(message: types.Message, state: FSMContext):
     await message.answer("Дії успішно скасовано ✅", reply_markup=USER_KB)
     
     
-@private_router.message(StateFilter('*'), Command('back'))
+@private_router.message(CustomStateFilter(SuggestPost), Command('back'))
 async def back_handler(message: types.Message, state: FSMContext):
     current_state = await state.get_state()
     
@@ -178,3 +176,33 @@ async def img_posted(message: types.Message, state: FSMContext, session: AsyncSe
 @private_router.message(SuggestPost.image)
 async def img_post_dem(message: types.Message, state: FSMContext):
     await message.answer("Відправте <b>ФОТО</b>")
+    
+    
+    
+# FSM QUESTION
+
+
+@private_router.message(StateFilter(None), F.text == "Задати питання")
+async def connect_admins(message: types.Message, state: FSMContext):
+    await message.answer("Введіть ваше питання, адміністрація розгляне \
+                         пропозицію та надасть вам відповідь у найближчий час", reply_markup=types.ReplyKeyboardRemove())    
+    await state.set_state(QuestionAdd.text)
+    
+
+@private_router.message(QuestionAdd.text, F.text)
+async def text_question(message: types.Message, state: FSMContext, session: AsyncSession):
+    await state.update_data(user_id=message.from_user.id)
+    await state.update_data(checked=0)
+    await state.update_data(text=message.text)
+    
+    data = await state.get_data()
+    
+    try:
+        await question_add(session, data)
+        await message.answer('Ваш запит отримано, очікуйте на відповідь', reply_markup=USER_KB)
+        await state.clear()
+    except Exception as e:
+            await message.answer(
+            f"Помилка: \n{str(e)}\nЗверніться до сис адміна",
+            reply_markup=USER_KB,
+        )

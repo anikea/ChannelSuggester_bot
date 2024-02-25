@@ -11,15 +11,18 @@ from handlers.admin_handler import admin_router
 
 from database.engine import create_db, drop_db, session_maker
 from database.db import DBSession
+from database.engine import drop_table
 
 bot = Bot(token=os.getenv('TOKEN'), parse_mode='HTML')
 dp = Dispatcher()
 
 
-dp.include_router(admin_router)
 dp.include_router(private_router)
-    
+dp.include_router(admin_router)
+
+
 async def on_startup(bot):
+    # await drop_table('questions')
     await create_db()
 
 
