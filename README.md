@@ -8,7 +8,7 @@
 В боті реалізована перевірка на типові помилки та візуально використаний мінімалістичний стиль
 
 Залежності:
-.env (TOKEN="",ADMIN_ID="",DB_LITE="sqlite+aiosqlite:///NAME"
+.env (TOKEN="",ADMIN_ID="",DB_LITE="sqlite+aiosqlite:///NAME")
 aiogram(v3+), asyncio, python-dotenv, sqalchemy
 
 v1.0
