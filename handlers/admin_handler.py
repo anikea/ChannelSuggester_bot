@@ -16,8 +16,6 @@ from database.orm_query import orm_delete_suggest, orm_get_suggests, orm_get_pag
 from keyboards.inline import get_callback_btns
 
 
-
-
 admin_router = Router()
 
 admin_router.message.filter(ChatTypeFilter(['private', 'channel']))
@@ -26,7 +24,7 @@ ADMIN_ID = os.getenv('ADMIN_ID')
 
 bot = Bot(os.getenv("TOKEN"))
 
-CHANNEL_ID = -1001864149325 # Test Channel
+CHANNEL_ID = "YOUR_CHANNEL_ID" # Test Channel
 
 ADMIN_KB = get_keyboard(
     "Переглянути запити [+5]",
