@@ -24,7 +24,7 @@ ADMIN_ID = os.getenv('ADMIN_ID')
 
 bot = Bot(os.getenv("TOKEN"))
 
-CHANNEL_ID = "YOUR_CHANNEL_ID" # Test Channel
+CHANNEL_ID = "YOUR CHANNEL ID" # Test Channel
 
 ADMIN_KB = get_keyboard(
     "Переглянути запити [+5]",

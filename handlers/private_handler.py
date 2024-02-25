@@ -38,7 +38,7 @@ async def start_cmd(message: types.Message):
     else:
         await message.answer(text="<b>Схоже ви не підписані на канал!</b>\n"
                            "Підпишіться, після цього використайте команду /start "
-                           "\n\n\n<a href='https://t.me/+cv1L5SHF66c1ZmQy'>КАНАЛ</a>\n\n\n", 
+                           "\n\n\n<a href='YOUR URL'>КАНАЛ</a>\n\n\n", 
                      parse_mode='HTML')
 
 
